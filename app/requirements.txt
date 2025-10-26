@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+yt-dlp
+pydantic
+vttformatter
+jinja2
+python-multipart
+aiofiles
+httpx

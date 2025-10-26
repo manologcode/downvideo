@@ -1,0 +1,12 @@
+# Ignore contents of resources folder but keep the folder structure
+resources/audios/*
+resources/subtitles/*
+resources/videos/*
+cookies.txt
+
+# Keep the directories themselves
+!resources/audios/.gitkeep
+!resources/subtitles/.gitkeep
+!resources/videos/.gitkeep
+
+README-private.md

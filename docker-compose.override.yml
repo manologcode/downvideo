@@ -1,0 +1,10 @@
+services:
+  downvideo:
+    build: .
+    command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "5000", "--reload"]
+    ports:
+      - "5000:5000"
+    volumes:
+        - ./app:/app
+        - ./resources:/resources
+

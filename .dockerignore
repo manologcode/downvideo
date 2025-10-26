@@ -1,0 +1,9 @@
+# Also ignore git files
+.git
+.gitignore
+
+# Ignore any local development files
+*.log
+*.tmp
+__pycache__/
+*.pyc

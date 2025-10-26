@@ -1,0 +1,8 @@
+services:
+  downvideo:
+    image: manologcode/downvideo
+    container_name: downvideo
+    volumes:
+      - ./cookies.txt:/app/cookies.txt
+    environment:
+      - EXTERNAL_API_URL=http://localhost:5002/external_link
