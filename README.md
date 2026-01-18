@@ -100,11 +100,32 @@ Parámetros comunes:
   ```
 - El archivo se guarda en `resources/videos/`.
 
-### 5) Estado de tareas
+### 5) Descarga automática de audio y envío a servicio externo
+- POST `/auto-audio` (application/json)
+  - Body: `{ "url": "https://www.youtube.com/..." }`
+  - Respuesta inmediata: `{ "task_id": "...", "status": "processing" }`
+  - Proceso en background:
+    1. Descarga el audio del vídeo en MP3
+    2. Lo sube automáticamente a `EXTERNAL_API_URL/external_link`
+    3. Puedes consultar el estado con `GET /task/{task_id}`
+  - Resultado (al completar):
+    ```json
+    {
+      "status": "completed",
+      "result": {
+        "message": "Audio downloaded and uploaded successfully",
+        "filename": "archivo.mp3",
+        "title": "Título del vídeo"
+      }
+    }
+    ```
+  - Requiere la variable `EXTERNAL_API_URL` configurada.
+
+### 6) Estado de tareas
 - GET `/task/{task_id}` → `{ status: processing|completed|error, result, error }`
 - GET `/tasks` → listado de tareas en memoria.
 
-### 6) Envío a servicio externo
+### 7) Envío a servicio externo
 - POST `/send-external` (multipart/form-data)
   - Campos: `title`, `url`, `filename`, `file` (UploadFile)
   - Usa la variable `EXTERNAL_API_URL` (base URL). La app envía a `EXTERNAL_API_URL/external_link`.
