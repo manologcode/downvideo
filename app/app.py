@@ -155,7 +155,7 @@ async def send_external(
             'title': (None, title),
             'url': (None, url), 
             'filename': (None, filename),
-            'file': (filename, await file.read(), file.content_type)
+            'audio_file': (filename, await file.read(), file.content_type)
         }
         
         # Send POST request to external service
@@ -187,48 +187,67 @@ async def auto_audio(request: UrlRequest, background_tasks: BackgroundTasks):
     task_id = get_next_task_id()
     task_storage[task_id] = {"status": "processing", "result": None, "error": None}
     
-    def process_and_upload():
+    async def process_and_upload():
         try:
+            # Validate external API URL is configured
+            external_api_url = os.getenv("EXTERNAL_API_URL", "").strip()
+            if not external_api_url:
+                raise ValueError("EXTERNAL_API_URL is not configured in environment variables")
+            
+            print(f"[{task_id}] Starting audio download for: {request.url}")
+            
             # Download audio
             audio_result = download_audio(str(request.url), task_id)
             title = audio_result['title']
             filename = audio_result['file_name']
             file_path = os.path.join("/resources/audios/", filename)
             
-            # Upload to external service
-            external_api_url = os.getenv("EXTERNAL_API_URL", "")
+            print(f"[{task_id}] Audio downloaded to: {file_path}")
             
+            # Verify file exists
+            if not os.path.exists(file_path):
+                raise FileNotFoundError(f"Audio file not found at {file_path}")
+            
+            print(f"[{task_id}] Uploading to external API: {external_api_url}")
+            
+            # Upload to external service
             with open(file_path, 'rb') as f:
                 files = {
                     'title': (None, title),
                     'url': (None, str(request.url)), 
                     'filename': (None, filename),
-                    'file': (filename, f, 'audio/mpeg')
+                    'audio_file': (filename, f, 'audio/mpeg')
                 }
                 
-                import httpx
-                with httpx.Client() as client:
-                    response = client.post(
-                        f'{external_api_url}/external_link',
+                async with httpx.AsyncClient() as client:
+                    response = await client.post(
+                        external_api_url,
                         files=files,
                         headers={'accept': 'application/json'},
                         timeout=30.0
                     )
                     
+                    print(f"[{task_id}] External API response: {response.status_code}")
+                    
                     if response.status_code == 200:
+                        print(f"[{task_id}] Successfully uploaded to external API")
                         task_storage[task_id] = {
                             "status": "completed", 
                             "result": {"message": "Audio downloaded and uploaded successfully", "filename": filename, "title": title}, 
                             "error": None
                         }
                     else:
+                        error_msg = f"External service returned status {response.status_code}: {response.text}"
+                        print(f"[{task_id}] Error: {error_msg}")
                         task_storage[task_id] = {
                             "status": "error", 
                             "result": None, 
-                            "error": f"External service returned status {response.status_code}"
+                            "error": error_msg
                         }
         except Exception as e:
-            task_storage[task_id] = {"status": "error", "result": None, "error": str(e)}
+            error_msg = str(e)
+            print(f"[{task_id}] Exception: {error_msg}")
+            task_storage[task_id] = {"status": "error", "result": None, "error": error_msg}
     
     background_tasks.add_task(process_and_upload)
     return {"task_id": task_id, "status": "processing", "message": "Audio download and upload started in background"}

@@ -5,4 +5,4 @@ services:
     volumes:
       - ./cookies.txt:/app/cookies.txt
     environment:
-      - EXTERNAL_API_URL=http://localhost:5002/external_link
+      - EXTERNAL_API_URL=https://linksapi.manolog.es/external_link

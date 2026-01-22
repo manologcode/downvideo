@@ -160,3 +160,12 @@ docker run -d \
 
 - La API quedará disponible en http://localhost:5000
 - Si vas a usar el endpoint `/send-external`, ajusta `EXTERNAL_API_URL` al host/puerto de tu servicio externo. hace un envio de archivo por POST con los parametros  { title: "titulo", url: "https://www.youtube.com/...", filename: "ejemplo.mp3", file }
+
+para ejecutar una creacio automatica
+
+```
+curl -X POST http://localhost:5000/auto-audio \
+-H "Content-Type: application/json" \
+-d '{"url": "https://www.youtube.com/watch?v=ae4HtFudbGU"}'
+
+```

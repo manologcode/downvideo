@@ -31,4 +31,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 EXPOSE 5000
 
+# CMD  ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "5000", "--limit-concurrency", "100", "--limit-max-requests", "10000"]
 CMD  ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "5000"]
