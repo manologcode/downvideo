@@ -181,9 +181,9 @@ async def send_external(
             status_code=500
         )
 
-@app.post("/auto-audio")
-async def auto_audio(request: UrlRequest, background_tasks: BackgroundTasks):
-    """Endpoint to automatically download audio and upload to external service"""
+@app.get("/auto-audio", response_class=HTMLResponse)
+async def auto_audio(request: Request, url: str, background_tasks: BackgroundTasks):
+    """Endpoint to automatically download audio and upload to external service (returns HTML status page)"""
     task_id = get_next_task_id()
     task_storage[task_id] = {"status": "processing", "result": None, "error": None}
     
@@ -194,10 +194,10 @@ async def auto_audio(request: UrlRequest, background_tasks: BackgroundTasks):
             if not external_api_url:
                 raise ValueError("EXTERNAL_API_URL is not configured in environment variables")
             
-            print(f"[{task_id}] Starting audio download for: {request.url}")
+            print(f"[{task_id}] Starting audio download for: {url}")
             
             # Download audio
-            audio_result = download_audio(str(request.url), task_id)
+            audio_result = download_audio(url, task_id)
             title = audio_result['title']
             filename = audio_result['file_name']
             file_path = os.path.join("/resources/audios/", filename)
@@ -214,7 +214,7 @@ async def auto_audio(request: UrlRequest, background_tasks: BackgroundTasks):
             with open(file_path, 'rb') as f:
                 files = {
                     'title': (None, title),
-                    'url': (None, str(request.url)), 
+                    'url': (None, url), 
                     'filename': (None, filename),
                     'audio_file': (filename, f, 'audio/mpeg')
                 }
@@ -250,4 +250,10 @@ async def auto_audio(request: UrlRequest, background_tasks: BackgroundTasks):
             task_storage[task_id] = {"status": "error", "result": None, "error": error_msg}
     
     background_tasks.add_task(process_and_upload)
-    return {"task_id": task_id, "status": "processing", "message": "Audio download and upload started in background"}
+    
+    # Return HTML page showing the status
+    return templates.TemplateResponse("auto_audio.html", {
+        "request": request,
+        "task_id": task_id,
+        "url": url
+    })

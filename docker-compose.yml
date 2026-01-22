@@ -2,7 +2,7 @@ services:
   downvideo:
     image: manologcode/downvideo
     container_name: downvideo
-    volumes:
-      - ./cookies.txt:/app/cookies.txt
+    # volumes:
+    #   - ./cookies.txt:/app/cookies.txt
     environment:
       - EXTERNAL_API_URL=https://linksapi.manolog.es/external_link
