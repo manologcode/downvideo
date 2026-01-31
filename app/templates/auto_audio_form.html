@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Descarga de Audio Automática</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        .header p {
+            color: #666;
+            font-size: 14px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            background-color: #f8f9ff;
+        }
+        .form-group input::placeholder {
+            color: #999;
+        }
+        .button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        .button:active {
+            transform: translateY(0);
+        }
+        .error-message {
+            color: #dc3545;
+            font-size: 14px;
+            margin-top: 5px;
+            display: none;
+        }
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: #1565c0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎵 Descarga de Audio</h1>
+            <p>Introduce la URL del video para descargar su audio automáticamente</p>
+        </div>
+        
+        <div class="info-box">
+            <strong>ℹ️ Información:</strong> El audio será descargado y enviado automáticamente al servidor.
+        </div>
+        
+        <form id="audioForm" onsubmit="handleSubmit(event)">
+            <div class="form-group">
+                <label for="urlInput">URL del Video</label>
+                <input 
+                    type="url" 
+                    id="urlInput" 
+                    name="url"
+                    placeholder="https://www.youtube.com/watch?v=..." 
+                    required
+                    autofocus
+                >
+                <div class="error-message" id="errorMessage"></div>
+            </div>
+            
+            <button type="submit" class="button" id="submitBtn">
+                Descargar y Procesar
+            </button>
+        </form>
+    </div>
+
+    <script>
+        function handleSubmit(event) {
+            event.preventDefault();
+            
+            const url = document.getElementById('urlInput').value.trim();
+            const errorMessage = document.getElementById('errorMessage');
+            const submitBtn = document.getElementById('submitBtn');
+            
+            // Validate URL
+            if (!url) {
+                errorMessage.textContent = 'Por favor introduce una URL válida';
+                errorMessage.style.display = 'block';
+                return;
+            }
+            
+            // Hide error message
+            errorMessage.style.display = 'none';
+            
+            // Disable button and show loading state
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Procesando...';
+            
+            // Redirect to /auto-audio with the URL parameter
+            window.location.href = `/auto-audio?url=${encodeURIComponent(url)}`;
+        }
+        
+        // Allow Enter key to submit
+        document.getElementById('urlInput').addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                document.getElementById('audioForm').dispatchEvent(new Event('submit'));
+            }
+        });
+    </script>
+</body>
+</html>

@@ -182,8 +182,16 @@ async def send_external(
         )
 
 @app.get("/auto-audio", response_class=HTMLResponse)
-async def auto_audio(request: Request, url: str, background_tasks: BackgroundTasks):
+async def auto_audio(request: Request, url: Optional[str] = None, background_tasks: BackgroundTasks = None):
     """Endpoint to automatically download audio and upload to external service (returns HTML status page)"""
+    
+    # If url is not provided, show form to input it
+    if not url:
+        return templates.TemplateResponse("auto_audio_form.html", {
+            "request": request
+        })
+    
+    # If url is provided, process it
     task_id = get_next_task_id()
     task_storage[task_id] = {"status": "processing", "result": None, "error": None}
     
