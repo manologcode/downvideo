@@ -2,6 +2,7 @@
         let currentTaskId = null;
         let audioData = null;
         let currentStep = 'initial'; // 'initial', 'processing', 'completed', 'sending'
+        let autoUpload = true; // Rastrear el estado del checkbox
 
         const form = document.getElementById('audioForm');
         const container = document.getElementById('mainContainer');
@@ -14,11 +15,13 @@
         const actionButtons = document.getElementById('actionButtons');
         const downloadBtn = document.getElementById('downloadBtn');
         const sendBtn = document.getElementById('sendBtn');
+        const autoUploadCheckbox = document.getElementById('autoUploadCheckbox');
 
         form.addEventListener('submit', async function(e) {
             e.preventDefault();
             
             if (currentStep === 'initial') {
+                autoUpload = autoUploadCheckbox ? autoUploadCheckbox.checked : true;
                 await startAudioDownload();
             }
         });
@@ -133,19 +136,25 @@
             statusCard.classList.add('success');
             document.getElementById('statusText').textContent = '¡Audio descargado exitosamente!';
             
-            // Mostrar botones de acción
-            actionButtons.classList.remove('hidden');
-            downloadBtn.classList.remove('hidden');
-            
-            // Si external_api_url no está vacío, mostrar campos adicionales y botón de envío
-            if (externalApiUrl && externalApiUrl.trim() !== "") {
-                // Expandir contenedor y mostrar campos adicionales
-                container.classList.add('expanded');
-                additionalFields.classList.add('show');
-                sendBtn.classList.remove('hidden');
+            // Si autoUpload está habilitado
+            if (autoUpload && externalApiUrl && externalApiUrl.trim() !== "") {
+                // Enviar automáticamente al servidor
+                sendToExternal();
+            } else {
+                // Mostrar botones de acción si no es auto-upload o no hay servidor
+                actionButtons.classList.remove('hidden');
+                downloadBtn.classList.remove('hidden');
                 
-                // Verificar estado del servidor externo
-                updateServerStatus();
+                // Si external_api_url existe, mostrar campos adicionales y botón de envío
+                if (externalApiUrl && externalApiUrl.trim() !== "") {
+                    // Expandir contenedor y mostrar campos adicionales
+                    container.classList.add('expanded');
+                    additionalFields.classList.add('show');
+                    sendBtn.classList.remove('hidden');
+                    
+                    // Verificar estado del servidor externo
+                    updateServerStatus();
+                }
             }
             
             updateUI();
@@ -230,7 +239,13 @@
                     }
                     
                     const result = await response.json();
-                    showSuccess('¡Datos enviados exitosamente al sistema externo!');
+                    
+                    // Si fue automático, solo mostrar el resultado
+                    if (autoUpload) {
+                        showSuccess('¡Audio descargado y enviado exitosamente al servidor!');
+                    } else {
+                        showSuccess('¡Datos enviados exitosamente al sistema externo!');
+                    }
                     
                 } catch (fetchError) {
                     clearTimeout(timeoutId);
@@ -257,6 +272,15 @@
                 }
                 
                 showError('Error al enviar datos: ' + errorMessage, false);
+                
+                // Si fue automático y hubo error, mostrar botones de reintento
+                if (autoUpload) {
+                    actionButtons.classList.remove('hidden');
+                    downloadBtn.classList.remove('hidden');
+                    container.classList.add('expanded');
+                    additionalFields.classList.add('show');
+                    sendBtn.classList.remove('hidden');
+                }
                 
                 // Actualizar estado del botón después del error
                 setTimeout(() => {

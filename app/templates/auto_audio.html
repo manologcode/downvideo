@@ -134,6 +134,38 @@
             margin-top: 15px;
             word-break: break-all;
         }
+        .btn {
+            padding: 10px;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: opacity 0.2s, transform 0.2s;
+        }
+        .btn:hover:not(:disabled) {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .download-btn {
+            background: #4caf50;
+        }
+        .send-btn {
+            background: #2196F3;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .button-group button {
+            flex: 1;
+        }
     </style>
 </head>
 <body>
@@ -167,6 +199,11 @@
     <script>
         const taskId = '{{ task_id }}';
         const pollInterval = 1000; // Check every second
+        const externalApiUrl = '{{ external_api_url }}';
+        
+        // Obtener parámetro autoUpload de la URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const autoUpload = urlParams.get('autoUpload') !== 'false'; // true por defecto
         
         function updateStatus() {
             fetch(`/task/${taskId}`)
@@ -176,6 +213,12 @@
                     const statusText = document.getElementById('statusText');
                     const progressBar = document.getElementById('progressBar');
                     const messageContainer = document.getElementById('messageContainer');
+                    
+                    // Verificar que los elementos existan
+                    if (!statusValue || !statusText || !progressBar || !messageContainer) {
+                        console.error('Required DOM elements not found');
+                        return;
+                    }
                     
                     if (data.status === 'processing') {
                         statusValue.className = 'status-value status-processing';
@@ -187,15 +230,45 @@
                         progressBar.style.display = 'none';
                         
                         if (data.result) {
-                            const resultHtml = `
-                                <div class="success-message">
-                                    <strong>✓ Éxito:</strong><br>
-                                    ${data.result.message}<br>
-                                    <strong>Título:</strong> ${data.result.title}<br>
-                                    <strong>Archivo:</strong> ${data.result.filename}
-                                </div>
-                            `;
-                            messageContainer.innerHTML = resultHtml;
+                            // Si autoUpload está deshabilitado, mostrar opciones de descarga/envío
+                            if (!autoUpload) {
+                                const resultHtml = `
+                                    <div class="success-message">
+                                        <strong>✓ Éxito - Descarga completada:</strong><br>
+                                        ${data.result.message}<br>
+                                        <strong>Título:</strong> ${data.result.title}<br>
+                                        <strong>Archivo:</strong> ${data.result.filename}
+                                    </div>
+                                    <div class="button-group">
+                                        <button id="downloadBtn" class="btn download-btn">
+                                            📥 Descargar Audio
+                                        </button>
+                                        <button id="sendBtn" class="btn send-btn">
+                                            📤 Enviar al Servidor
+                                        </button>
+                                    </div>
+                                `;
+                                messageContainer.innerHTML = resultHtml;
+                                
+                                // Agregar listeners a los botones
+                                document.getElementById('downloadBtn').addEventListener('click', function() {
+                                    downloadAudio('{{ task_id }}', data.result.filename);
+                                });
+                                document.getElementById('sendBtn').addEventListener('click', function() {
+                                    sendToServer('{{ task_id }}', data.result);
+                                });
+                            } else {
+                                // Si autoUpload está habilitado, solo mostrar resultado
+                                const resultHtml = `
+                                    <div class="success-message">
+                                        <strong>✓ Éxito:</strong><br>
+                                        ${data.result.message}<br>
+                                        <strong>Título:</strong> ${data.result.title}<br>
+                                        <strong>Archivo:</strong> ${data.result.filename}
+                                    </div>
+                                `;
+                                messageContainer.innerHTML = resultHtml;
+                            }
                         }
                         
                         clearInterval(statusInterval);
@@ -216,6 +289,94 @@
                 .catch(error => {
                     console.error('Error fetching status:', error);
                 });
+        }
+        
+        function downloadAudio(taskId, filename) {
+            window.location.href = `/get-audio-file/${filename}`;
+        }
+        
+        async function sendToServer(taskId, result) {
+            const messageContainer = document.getElementById('messageContainer');
+            const sendBtn = document.getElementById('sendBtn');
+            
+            try {
+                if (!externalApiUrl || externalApiUrl.trim() === "") {
+                    throw new Error('URL del servidor externo no configurada');
+                }
+                
+                if (sendBtn) {
+                    sendBtn.disabled = true;
+                    sendBtn.textContent = 'Enviando...';
+                }
+                
+                messageContainer.innerHTML = '<div class="success-message">Enviando al servidor...</div>';
+                
+                // Obtener el archivo de audio
+                const audioResponse = await fetch(`/get-audio-file/${result.filename}`);
+                if (!audioResponse.ok) {
+                    throw new Error('No se pudo obtener el archivo de audio');
+                }
+                const audioBlob = await audioResponse.blob();
+                
+                // Preparar FormData
+                const formData = new FormData();
+                formData.append('title', result.title);
+                formData.append('url', '{{ url }}');
+                formData.append('filename', result.filename);
+                formData.append('audio_file', audioBlob, result.filename);
+                
+                // Configurar timeout para la petición
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 segundos timeout
+                
+                try {
+                    const response = await fetch(`${externalApiUrl}`, {
+                        method: 'POST',
+                        body: formData,
+                        signal: controller.signal
+                    });
+                    
+                    clearTimeout(timeoutId);
+                    
+                    if (!response.ok) {
+                        // Intentar obtener el mensaje de error del servidor
+                        let errorMessage = 'Error desconocido del servidor';
+                        try {
+                            const errorData = await response.json();
+                            errorMessage = errorData.error || errorData.message || `Error ${response.status}: ${response.statusText}`;
+                        } catch (parseError) {
+                            errorMessage = `Error ${response.status}: ${response.statusText}`;
+                        }
+                        throw new Error(errorMessage);
+                    }
+                    
+                    const resultData = await response.json();
+                    messageContainer.innerHTML = '<div class="success-message"><strong>✓ Audio enviado exitosamente al servidor!</strong></div>';
+                    
+                } catch (fetchError) {
+                    clearTimeout(timeoutId);
+                    
+                    let errorMsg = fetchError.message;
+                    if (fetchError.name === 'AbortError') {
+                        errorMsg = 'Timeout: El servidor externo no responde. Verifica que esté disponible.';
+                    } else if (fetchError.message.includes('Failed to fetch') || fetchError.name === 'TypeError') {
+                        errorMsg = 'No se puede conectar al servidor externo. Verifica que esté ejecutándose y accesible.';
+                    }
+                    
+                    throw new Error(errorMsg);
+                }
+                
+            } catch (error) {
+                let errorMessage = error.message;
+                
+                messageContainer.innerHTML = `<div class="error-message"><strong>Error al enviar:</strong><br>${errorMessage}</div>`;
+                
+                // Restaurar botón
+                if (sendBtn) {
+                    sendBtn.disabled = false;
+                    sendBtn.textContent = '📤 Enviar al Servidor';
+                }
+            }
         }
         
         // Initial update
